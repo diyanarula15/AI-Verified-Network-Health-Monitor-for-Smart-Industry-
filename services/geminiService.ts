@@ -1,28 +1,30 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-let genAI: GoogleGenAI | null = null;
+let genAI: GoogleGenerativeAI | null = null;
 
 const getGenAI = () => {
   if (!genAI) {
-    const apiKey = process.env.API_KEY;
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
     if (apiKey) {
-      genAI = new GoogleGenAI({ apiKey });
+      genAI = new GoogleGenerativeAI(apiKey);
     }
   }
   return genAI;
 };
 
-export const queryNeuroLink = async (
+export const queryPulseGuard = async (
   query: string, 
   contextData: any
 ): Promise<string> => {
   const ai = getGenAI();
   if (!ai) {
-    return "Neuro-Link Error: API Key not configured. Unable to connect to neural core.";
+    return "PulseGuard Error: API Key not configured. Unable to connect to neural core.";
   }
 
+  const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
+
   const systemContext = `
-    You are "Neuro-Link", an advanced Industrial IoT AI assistant for a smart factory network.
+    You are "PulseGuard", an advanced Industrial IoT AI assistant for a smart factory network.
     
     Current System State:
     - Critical Alert: Physical Layer Fault on Link Switch_Core <-> Robot_PLC.
@@ -39,21 +41,20 @@ export const queryNeuroLink = async (
   `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: systemContext,
-    });
-    
-    return response.text || "Neuro-Link Analysis Inconclusive.";
+    const result = await model.generateContent(systemContext);
+    const response = await result.response;
+    return response.text();
   } catch (error) {
     console.error("Gemini API Error:", error);
-    return "Neuro-Link Connection Error: Unable to reach central processing unit.";
+    return "PulseGuard Connection Error: Unable to reach central processing unit.";
   }
 };
 
 export const generatePredictiveInsights = async (): Promise<string> => {
   const ai = getGenAI();
   if (!ai) return "Unable to connect to Neural Prediction Core. Check API Key.";
+
+  const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
 
   const context = `
     Analyze the following Industrial IoT Telemetry Trend:
@@ -70,11 +71,9 @@ export const generatePredictiveInsights = async (): Promise<string> => {
   `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: context,
-    });
-    return response.text || "Prediction Model requires more data.";
+    const result = await model.generateContent(context);
+    const response = await result.response;
+    return response.text();
   } catch (error) {
     console.error("Gemini Prediction Error:", error);
     return "Neural Core Offline: Prediction Unavailable.";

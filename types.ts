@@ -42,6 +42,8 @@ export interface InsightCard {
   content: string;
   timestamp: string;
   loading?: boolean; // For "Active Verification" state
+  actionRequired?: boolean; // For approval button
+  onAction?: () => void; // Function to execute
 }
 
 export interface ChatMessage {

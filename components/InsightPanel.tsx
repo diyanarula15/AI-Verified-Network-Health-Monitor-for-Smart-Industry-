@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronRight, ChevronLeft, Bot, Send, AlertTriangle, CheckSquare, Activity, Terminal, ShieldCheck, Sparkles, TrendingUp, Loader2 } from 'lucide-react';
 import { InsightCard, ChatMessage } from '../types';
-import { queryNeuroLink, generatePredictiveInsights } from '../services/geminiService';
+import { queryPulseGuard, generatePredictiveInsights } from '../services/geminiService';
 import { useSimulation } from '../context/SimulationContext';
 
 const InsightPanel: React.FC = () => {
@@ -26,7 +26,7 @@ const InsightPanel: React.FC = () => {
     setChatHistory(prev => [...prev, userMsg]);
     setInput('');
     setIsTyping(true);
-    const responseText = await queryNeuroLink(userMsg.text, { /* context passed inside service */ });
+    const responseText = await queryPulseGuard(userMsg.text, { /* context passed inside service */ });
     const aiMsg: ChatMessage = { id: (Date.now() + 1).toString(), role: 'model', text: responseText };
     setChatHistory(prev => [...prev, aiMsg]);
     setIsTyping(false);
@@ -108,6 +108,31 @@ const InsightPanel: React.FC = () => {
         );
     }
 
+    if (card.type === 'action' && card.actionRequired && card.onAction) {
+        return (
+            <div key={card.id} className="relative p-4 rounded-lg border-l-4 border-neon-blue bg-slate-800/90 shadow-lg shadow-blue-500/10 mb-3 animate-pulse ring-1 ring-neon-blue/30">
+                 <div className="flex items-center gap-2 mb-2">
+                    <ShieldCheck className="text-neon-blue w-5 h-5 animate-bounce" />
+                    <span className="font-bold text-xs text-neon-blue tracking-wider uppercase">{card.title}</span>
+                </div>
+                <p className="text-sm text-slate-200 leading-relaxed pl-7 mb-3">{card.content}</p>
+                <div className="pl-7">
+                    <button 
+                        onClick={card.onAction}
+                        className="w-full py-2 px-4 bg-neon-blue hover:bg-blue-400 text-slate-900 font-bold rounded shadow-lg transition-all text-xs font-mono flex items-center justify-center gap-2"
+                    >
+                        <ShieldCheck size={14} className="text-slate-900" />
+                        SECURE AUTHORIZE (1-CLICK)
+                    </button>
+                    <div className="mt-2 flex items-center gap-2 text-[10px] text-slate-500 font-mono">
+                        <Activity size={10} className="text-neon-green/80 animate-pulse" />
+                        <span>Hirschmann TDR Test Staged. Waiting for SSL Auth Key...</span>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     let borderClass = 'border-l-4 border-slate-600 bg-slate-800/50';
     let titleClass = 'text-slate-200';
     if (card.type === 'alert') {
@@ -140,7 +165,7 @@ const InsightPanel: React.FC = () => {
         <div className="mt-8 flex flex-col gap-4">
              <Bot className="text-neon-green w-6 h-6 animate-pulse" />
              <div className="writing-vertical-lr text-slate-500 text-xs font-mono tracking-widest uppercase transform rotate-180">
-                Neuro-Link Active
+                PulseGuard Active
              </div>
         </div>
       </div>
@@ -153,7 +178,7 @@ const InsightPanel: React.FC = () => {
         <div className="flex items-center gap-2">
            <Bot className="text-neon-green w-5 h-5" />
            <div className="flex flex-col">
-             <h2 className="text-sm font-bold text-slate-100 tracking-wide font-mono leading-none">NEURO-LINK AI</h2>
+             <h2 className="text-sm font-bold text-slate-100 tracking-wide font-mono leading-none">PULSEGUARD AI</h2>
              <span className="text-[10px] text-neon-green/80 font-mono flex items-center gap-1 mt-1">
                 <ShieldCheck size={10} /> System Active
              </span>
@@ -241,7 +266,7 @@ const InsightPanel: React.FC = () => {
           <input
             type="text"
             className="w-full bg-slate-800 text-sm text-slate-200 rounded-md pl-3 pr-10 py-3 border border-slate-700 focus:outline-none focus:border-neon-green placeholder-slate-500 font-mono transition-colors"
-            placeholder="Ask Neuro-Link..."
+            placeholder="Ask PulseGuard..."
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}

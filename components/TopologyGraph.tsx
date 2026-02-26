@@ -44,6 +44,25 @@ const TopologyGraph: React.FC<TopologyGraphProps> = ({ viewMode = 'physical' }) 
     }
   };
 
+  // Special Highlight for Critical/Offline Nodes (Automatic "Pointing")
+  const renderFaultIndicator = (node: any) => {
+      if (node.status === 'critical' || node.status === 'offline') {
+          return (
+              <div className="absolute inset-0 z-0 pointer-events-none">
+                  {/* Ping Animation */}
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 border-2 border-rose-500 rounded-full animate-ping opacity-20"></div>
+                  {/* Target Reticle */}
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 border border-dashed border-rose-500 rounded-full animate-spin opacity-60" style={{ animationDuration: '3s' }}></div>
+                  {/* Label */}
+                  <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-rose-950/90 text-rose-300 text-[10px] px-2 py-0.5 rounded border border-rose-500/50 whitespace-nowrap animate-bounce">
+                      FAULT DETECTED
+                  </div>
+              </div>
+          );
+      }
+      return null;
+  };
+
   const getEdgeStyle = (status: string, edge: any) => {
     // X-Ray Filters: Protocol View
     if (viewMode === 'protocol') {
@@ -117,6 +136,7 @@ const TopologyGraph: React.FC<TopologyGraphProps> = ({ viewMode = 'physical' }) 
           onMouseLeave={() => setHoveredNode(null)}
           onClick={() => selectNode(node.id)}
         >
+          {renderFaultIndicator(node)}
           <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
             <span className={`text-xs font-mono font-bold px-2 py-0.5 rounded bg-black/80 border border-slate-700 
               ${node.status === 'critical' ? 'text-neon-rose' : node.status === 'offline' ? 'text-slate-500' : 'text-slate-300'}`}>

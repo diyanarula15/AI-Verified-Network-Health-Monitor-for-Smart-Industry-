@@ -1,7 +1,7 @@
-# Neuro-Link Sentinel
+# PulseGuard
 ## AI-Verified Network Health Monitor for Industrial IT/OT
 
-A real-time, dual-perspective simulation of an advanced industrial network monitoring system. Neuro-Link Sentinel demonstrates how AI-driven analysis can detect, diagnose, verify, and resolve complex network faults in an Industry 4.0 environment.
+A real-time, dual-perspective simulation of an advanced industrial network monitoring system. PulseGuard demonstrates how AI-driven analysis can detect, diagnose, verify, and resolve complex network faults in an Industry 4.0 environment.
 
 ---
 

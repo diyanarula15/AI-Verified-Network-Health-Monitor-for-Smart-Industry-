@@ -70,7 +70,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
             <Globe size={12} /> Secure Industrial Gateway v4.2
           </div>
           <h1 className="text-4xl font-black text-white tracking-tighter mb-2">
-            NEURO-LINK
+            PULSEGUARD
           </h1>
           <p className="text-slate-500 text-sm font-mono">
             Simulated Industrial Network Environment

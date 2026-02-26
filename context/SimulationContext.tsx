@@ -12,6 +12,14 @@ export const SimulationProvider: React.FC<{ children: ReactNode }> = ({ children
   const [activeFaults, setActiveFaults] = useState<string[]>([]);
   const [globalHealth, setGlobalHealth] = useState(98);
   const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
+  
+  // Timeout tracking for simulation sequences
+  const timeoutsRef = useRef<NodeJS.Timeout[]>([]);
+
+  const startTimeout = (callback: () => void, ms: number) => {
+    const id = setTimeout(callback, ms);
+    timeoutsRef.current.push(id);
+  };
 
   // HOLISTIC TELEMETRY ENGINE
   useEffect(() => {
@@ -86,11 +94,27 @@ export const SimulationProvider: React.FC<{ children: ReactNode }> = ({ children
   };
 
   const resetSimulation = () => {
-    setNodes(INITIAL_NODES);
-    setEdges(INITIAL_EDGES);
+    // Clear all pending simulation timeouts
+    timeoutsRef.current.forEach(clearTimeout);
+    timeoutsRef.current = [];
+
+    // Reset everything to initial state (deep clone to avoid reference pollution)
+    setNodes(JSON.parse(JSON.stringify(INITIAL_NODES)));
+    setEdges(JSON.parse(JSON.stringify(INITIAL_EDGES)));
+    setTelemetry(generateTelemetryData());
     setInsights([]);
     setActiveFaults([]);
     setGlobalHealth(98);
+    setSelectedNode(null);
+
+    // Broadcast reset to other clients
+    try {
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: 'reset', payload: { origin: clientIdRef.current } }));
+      }
+    } catch (e) {
+      // ignore
+    }
   };
   // WebSocket client: connect to local broadcaster so Injector <> Operator sync in real-time
   const clientIdRef = useRef<string>((typeof crypto !== 'undefined' && (crypto as any).randomUUID) ? (crypto as any).randomUUID() : `client-${Date.now()}`);
@@ -123,33 +147,115 @@ export const SimulationProvider: React.FC<{ children: ReactNode }> = ({ children
         content: `Simultaneous signal loss on 54 downstream assets.`, timestamp: timestamp()
       }, ...prev]);
 
-      setTimeout(() => {
+      startTimeout(() => {
         setInsights(prev => [{
           id: `det-${Date.now()}`, type: 'info', title: 'DETECTIVE ENGINE',
           content: `Correlating 50 Symptoms... Pattern Match Confirmed. ROOT CAUSE: Switch Port 4 Failure.`, timestamp: timestamp()
         }, ...prev]);
-      }, 1500);
 
-      setTimeout(() => {
-        const verifId = `verif-${Date.now()}`;
-        setInsights(prev => [{ id: verifId, type: 'verification', title: 'ACTIVE VERIFICATION', content: `Executing SSH to Hirschmann Switch... Running TDR Pulse Test.`, timestamp: timestamp(), loading: true }, ...prev]);
-        setTimeout(() => {
-          setInsights(prev => prev.map(c => {
-            if (c.id === verifId) return { ...c, title: 'VERIFIED FACT', content: 'Open Circuit at 15m. SNR: -90dBm.', loading: false };
-            return c;
-          }));
-          setTimeout(() => {
-            setInsights(prev => [{ id: `act-${Date.now()}`, type: 'action', title: 'EXPERT RECOMMENDATION', content: `Inspect CAT6 cable in Tray 4. Replace physical uplink on Port 4.`, timestamp: timestamp() }, ...prev]);
-          }, 1000);
-        }, 3000);
-      }, 3000);
+        // STAGE THE DIAGNOSTIC TEST IMMEDIATELY (Hypothesis -> Action)
+        startTimeout(() => {
+             const actionId = `act-req-${Date.now()}`;
+             setInsights(prev => [{
+                 id: actionId,
+                 type: 'action',
+                 title: 'SECURE DIAGNOSTIC STAGED', // Action
+                 content: 'Hypothesis: Layer 1 Cable Fault. AI has pre-loaded TDR Pulse Test on Hirschmann Switch Port 4. Awaiting secure encoded authorization.',
+                 timestamp: timestamp(),
+                 actionRequired: true,
+                 onAction: () => { // Proof
+                     setInsights(currentInternal => {
+                         const filtered = currentInternal.filter(c => c.id !== actionId);
+                         const verifId = `verif-${Date.now()}`;
+                         
+                         // Start async process
+                         startTimeout(() => {
+                              setInsights(verifState => verifState.map(c => {
+                                  // Result: Verified Fact
+                                  if (c.id === verifId) return { ...c, title: 'VERIFIED FACT', content: 'Open Circuit at 32m. Status: CONFIRMED.', loading: false };
+                                  return c;
+                              }));
+                              
+                              startTimeout(() => {
+                                  setInsights(finalState => [{ 
+                                      id: `rec-${Date.now()}`, 
+                                      type: 'action', 
+                                      title: 'EXPERT RECOMMENDATION', 
+                                      content: `Replace CAT6 uplink cable in Tray 4 (Segment 32m).`, 
+                                      timestamp: timestamp() 
+                                  }, ...finalState]);
+                              }, 1000);
+                         }, 2000);
+
+                         return [{ 
+                             id: verifId, 
+                             type: 'verification', 
+                             title: 'EXECUTING SECURE TDR', 
+                             content: `Authorized info received. Injecting electrical pulse on Port 4... Measuring reflections...`, 
+                             timestamp: timestamp(), 
+                             loading: true 
+                         }, ...filtered];
+                     });
+                 }
+             }, ...prev]);
+        }, 500);
+
+      }, 1500);
       return;
     }
 
     // Standard faults
     if (layer === 'L1') {
+      const isCableFault = faultType === 'Connection Loss' || faultType === 'Degradation';
       setEdges(prev => prev.map(e => (e.target === targetId || e.source === targetId) ? { ...e, status: 'critical' } : e));
       setNodes(prev => prev.map(n => n.id === targetId ? { ...n, status: 'warning' } : n));
+      
+      // If L1 fault is recognized, STAGE A TEST
+      if (isCableFault) {
+          startTimeout(() => {
+             const actionId = `act-req-l1-${Date.now()}`;
+             setInsights(prev => [{
+                 id: actionId,
+                 type: 'action',
+                 title: 'SECURE DIAGNOSTIC STAGED',
+                 content: `Hypothesis: Layer 1 Fault on ${targetId}. Action: System automatically staged TDR Pulse Test on upstream Switch. Ready for Authorization.`,
+                 timestamp: timestamp(),
+                 actionRequired: true,
+                 onAction: () => {
+                     setInsights(currentInternal => {
+                         const filtered = currentInternal.filter(c => c.id !== actionId);
+                         const verifId = `verif-l1-${Date.now()}`;
+                         
+                         startTimeout(() => {
+                              setInsights(verifState => verifState.map(c => {
+                                  if (c.id === verifId) return { ...c, title: 'VERIFIED FACT', content: `Open Circuit at 32m. Status: CONFIRMED.`, loading: false };
+                                  return c;
+                              }));
+                              
+                              startTimeout(() => {
+                                  setInsights(finalState => [{ 
+                                      id: `rec-l1-${Date.now()}`, 
+                                      type: 'action', 
+                                      title: 'EXPERT RECOMMENDATION', 
+                                      content: `Dispatched maintenance for segment replacement at 32m point.`, 
+                                      timestamp: timestamp() 
+                                  }, ...finalState]);
+                              }, 1000);
+                         }, 2000);
+
+                         return [{ 
+                             id: verifId, 
+                             type: 'verification', 
+                             title: 'EXECUTING SECURE TDR', 
+                             content: `Authorized info received. Injecting electrical pulse... Measuring reflections...`, 
+                             timestamp: timestamp(), 
+                             loading: true 
+                         }, ...filtered];
+                     });
+                 }
+             }, ...prev]);
+          }, 500);
+      }
     } else if (layer === 'L2') {
       setEdges(prev => prev.map(e => (e.target === targetId || e.source === targetId) ? { ...e, status: 'degraded' } : e));
     } else if (layer === 'L3') {
@@ -166,18 +272,70 @@ export const SimulationProvider: React.FC<{ children: ReactNode }> = ({ children
     if (layer === 'L7') alertData = { title: 'APPLICATION FAULT', content: `Modbus Write Timeout. PLC failed to acknowledge safety packet.` };
 
     // New Fault Types
-    if (faultType === 'Connection Loss') { alertData = { title: 'CONNECTION LOST', content: 'Physical link down. Carrier signal lost.' }; setNodes(prev => prev.map(n => n.id === targetId ? { ...n, status: 'offline' } : n)); }
+    let isCable = false;
+    if (faultType === 'Connection Loss') { 
+        alertData = { title: 'CONNECTION LOST', content: 'Physical link down. Carrier signal lost.' }; 
+        setNodes(prev => prev.map(n => n.id === targetId ? { ...n, status: 'offline' } : n)); 
+        isCable = true;
+    }
     if (faultType === 'Firmware Corruption') { alertData = { title: 'SECURITY ALERT', content: 'Firmware hash mismatch. Possible tampering detected.' }; setNodes(prev => prev.map(n => n.id === targetId ? { ...n, status: 'critical' } : n)); }
     if (faultType === 'Unauthorized Access') { alertData = { title: 'INTRUSION DETECTED', content: 'Unrecognized MAC address on port security violation.' }; setNodes(prev => prev.map(n => n.id === targetId ? { ...n, status: 'critical' } : n)); }
 
     setInsights(prev => [{ id: `alert-${Date.now()}`, type: 'alert', title: alertData.title, content: alertData.content, timestamp: timestamp() }, ...prev]);
+
+    // IF CABLE FAULT, STAGE TEST
+    if (isCable) {
+        startTimeout(() => {
+             const actionId = `act-cable-${Date.now()}`;
+             setInsights(prev => [{
+                 id: actionId,
+                 type: 'action',
+                 title: 'SECURE DIAGNOSTIC STAGED',
+                 content: `Hypothesis: Signal loss due to open circuit. Action: TDR Test pre-loaded on Switch Port 7. Awaiting Secure 1-Click Authorization.`,
+                 timestamp: timestamp(),
+                 actionRequired: true,
+                 onAction: () => {
+                     setInsights(currentInternal => {
+                         const filtered = currentInternal.filter(c => c.id !== actionId);
+                         const verifId = `verif-cable-${Date.now()}`;
+                         
+                         startTimeout(() => {
+                              setInsights(verifState => verifState.map(c => {
+                                  if (c.id === verifId) return { ...c, title: 'VERIFIED FACT', content: 'Open Circuit at 32m. Status: CONFIRMED.', loading: false };
+                                  return c;
+                              }));
+                              
+                              startTimeout(() => {
+                                setInsights(finalState => [{ 
+                                    id: `rec-c-${Date.now()}`, 
+                                    type: 'action', 
+                                    title: 'EXPERT RECOMMENDATION', 
+                                    content: `Replace CAT6 cable section between Node 2 and Node 3.`, 
+                                    timestamp: timestamp() 
+                                }, ...finalState]);
+                              }, 1000);
+                         }, 2500);
+
+                         return [{ 
+                             id: verifId, 
+                             type: 'verification', 
+                             title: 'EXECUTING SECURE TDR', 
+                             content: `Authorization verified. Running Active Pulse Diagnostic...`, 
+                             timestamp: timestamp(), 
+                             loading: true 
+                         }, ...filtered];
+                     });
+                 }
+             }, ...prev]);
+        }, 1200);
+    }
   };
 
   // Setup WebSocket connection to local broadcast server
   useEffect(() => {
     let mounted = true;
     try {
-      const wsUrl = (window as any).__NEURO_LINK_WS_URL || 'ws://localhost:4000';
+      const wsUrl = (window as any).__PULSEGUARD_WS_URL || 'ws://localhost:4000';
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
@@ -192,6 +350,17 @@ export const SimulationProvider: React.FC<{ children: ReactNode }> = ({ children
           if (m?.type === 'injectFault' && m.payload && m.payload.origin !== clientIdRef.current) {
             const { layer, targetId, faultType } = m.payload;
             applyLocalInject(layer, targetId, faultType);
+          } else if (m?.type === 'reset' && m.payload && m.payload.origin !== clientIdRef.current) {
+             // Remote reset received
+             timeoutsRef.current.forEach(clearTimeout);
+             timeoutsRef.current = [];
+             setNodes(JSON.parse(JSON.stringify(INITIAL_NODES)));
+             setEdges(JSON.parse(JSON.stringify(INITIAL_EDGES)));
+             setTelemetry(generateTelemetryData());
+             setInsights([]);
+             setActiveFaults([]);
+             setGlobalHealth(98);
+             setSelectedNode(null);
           }
         } catch (e) {
           // ignore

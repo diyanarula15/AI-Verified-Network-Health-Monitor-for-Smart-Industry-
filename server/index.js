@@ -7,7 +7,7 @@ const app = express();
 app.use(cors());
 
 app.get('/', (req, res) => {
-  res.send('Neuro-Link WebSocket Server - alive');
+  res.send('PulseGuard WebSocket Server - alive');
 });
 
 const server = http.createServer(app);
@@ -34,5 +34,5 @@ wss.on('connection', (ws) => {
 
 const PORT = process.env.PORT || 4000;
 server.listen(PORT, () => {
-  console.log(`Neuro-Link WS server listening on http://localhost:${PORT}`);
+  console.log(`PulseGuard WS server listening on http://localhost:${PORT}`);
 });

@@ -60,15 +60,15 @@ export const INITIAL_NODES: NetworkNode[] = [
     id: 'backup_svr',
     name: 'Backup_Server',
     type: 'server',
-    status: 'offline', 
+    status: 'healthy', 
     x: 100,
     y: 250,
-    details: { ip: '192.168.10.6', mac: '00:1B:44:88:99:BB', uptime: '0s', firmware: 'Win Svr 2019', vendor: 'Dell EMC', location: 'Rack 4, U12' }
+    details: { ip: '192.168.10.6', mac: '00:1B:44:88:99:BB', uptime: '10d 2h', firmware: 'Win Svr 2019', vendor: 'Dell EMC', location: 'Rack 4, U12' }
   }
 ];
 
 export const INITIAL_EDGES: NetworkEdge[] = [
-  { id: 'e1', source: 'historian', target: 'core_sw', status: 'high-traffic', latency: 8, bandwidth: 950 }, 
+  { id: 'e1', source: 'historian', target: 'core_sw', status: 'active', latency: 8, bandwidth: 950 }, 
   { id: 'e2', source: 'core_sw', target: 'dist_sw_a', status: 'active', latency: 4, bandwidth: 400 },
   { id: 'e3', source: 'core_sw', target: 'robot_plc', status: 'active', latency: 150, bandwidth: 10 }, 
   { id: 'e4', source: 'core_sw', target: 'wifi_ap', status: 'active', latency: 12, bandwidth: 54 },
